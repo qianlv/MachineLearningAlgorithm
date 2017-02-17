@@ -33,7 +33,8 @@ def test_decision_tree_classify():
 
 def test_decision_tree_regresson():
     data = np.loadtxt("../datesets/decision_tree/exp.txt", delimiter="\t")
-    test_data = np.loadtxt("../datesets/decision_tree/expTest.txt", delimiter="\t")
+    test_data = np.loadtxt(
+        "../datesets/decision_tree/expTest.txt", delimiter="\t")
     X = data[:, :-1]
     y = data[:, -1]
     model = DecisionTree(tree_type="reg", tol_err=1, tol_nset=4)

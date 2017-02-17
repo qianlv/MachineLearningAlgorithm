@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+import operator
 
 
 def add_intercept(X, val):
@@ -12,6 +13,10 @@ def get_split_mask(X, column, value, relation):
     left_mask = relation(X[:, column], value)
     right_mask = ~relation(X[:, column], value)
     return left_mask, right_mask
+
+
+def get_split_mask_by_eq(X, column, value):
+    return get_split_mask(X, column, value, operator.eq)
 
 
 def split_dataset(X, column, value, relation):
