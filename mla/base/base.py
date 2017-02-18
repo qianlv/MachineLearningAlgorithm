@@ -21,7 +21,7 @@ def get_split_mask_by_eq(X, column, value):
 
 def split_dataset(X, column, value, relation):
     less_mask, greater_mask = get_split_mask(
-            X, column, value, relation[column])
+            X, column, value, relation)
     return X[less_mask], X[greater_mask]
 
 

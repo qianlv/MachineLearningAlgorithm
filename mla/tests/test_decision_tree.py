@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from mla.ensemble import DecisionTree
-from mla.base import accuracy
+from mla.ensemble import DecisionTreeClassifier
+from mla.ensemble import DecisionTreeRegressor
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -26,9 +26,9 @@ def test_decision_tree_classify():
 
     y = np.array([-1, -1, +1, +1, -1, -1, -1, +1, +1, +1, +1, +1, +1, +1, -1])
 
-    model = DecisionTree(tree_type="clf")
-    model.train_fit(X, y)
-    print(model.predict(X) == y)
+    model = DecisionTreeClassifier()
+    model.train_fit(X, y, [True, True, True, True])
+    print(model.predict(X))
 
 
 def test_decision_tree_regresson():
@@ -37,7 +37,7 @@ def test_decision_tree_regresson():
         "../datesets/decision_tree/expTest.txt", delimiter="\t")
     X = data[:, :-1]
     y = data[:, -1]
-    model = DecisionTree(tree_type="reg", tol_err=1, tol_nset=4)
+    model = DecisionTreeRegressor(tol_err=1, tol_nset=4)
     model.train_fit(X, y)
     print("error rate before prune: ", model.loss(test_data))
     model.prune(test_data)

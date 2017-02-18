@@ -50,38 +50,28 @@ class DecisionTree(object):
         '>=': operator.ge,
     }
 
-    def __init__(self, tree_type="reg", limit_depth=None,
-                 tol_err=0, tol_nset=1):
-        if tree_type == "reg":
-            self._calculate_error = self._calculate_least_squares_error
-        elif tree_type == "clf":
-            self._calculate_error = self._calculate_gini
-        elif tree_type == "model":
-            self._calculate_error = self._calculate_linear_model_error
-        else:
-            raise ValueError("must be regression or classify tree")
-        self._tree_type = tree_type
+    def __init__(self, limit_depth=None, tol_err=0, tol_nset=1):
         self._limit_depth = limit_depth
         self._tol_err = tol_err
         self._tol_nset = tol_nset
         self._relation = []
 
-    def train_fit(self, X, y, relation=None):
+    def train_fit(self, X, y, discrete_features=None):
         """ 建决策树
 
         :X: 训练数据
         :y: 训练数据
         :relation: 数据特征划分是标记关系, 默认回归树为"<=", 分类树为"==".
         """
-        self._lables = np.lib.arraysetops.unique(y)
-        if not relation:
-            if self._tree_type == "reg":
-                relation = ["<="] * X.shape[1]
-            else:
-                relation = ["=="] * X.shape[1]
+        self._relation = [operator.lt] * np.shape(X)[0]
+        if discrete_features:
+            for i, is_disc in enumerate(discrete_features):
+                if is_disc:
+                    self._relation[i] = operator.eq
 
-        self._relation = [self.Operators[op] for op in relation]
+        self._lables = np.lib.arraysetops.unique(y)
         self._trees = self.make_tree(X, y, 1)
+        #  print("tree: ", self._trees)
 
     def make_tree(self, X, y, tree_depth):
         if y.shape[0] < self._tol_nset or \
@@ -131,29 +121,10 @@ class DecisionTree(object):
             min_less_mask, min_greater_mask
 
     def _create_leaf_node(self, y):
-        t = Tree()
-        t.is_leaf = True
-        if self._tree_type == "reg":
-            t.node_val = np.mean(y)
-        else:
-            c = Counter(y)
-            t.node_val = c.most_common(1)[0][0]
-            t.counter_samples = c
-        return t
+        raise NotImplementedError()
 
-    def _calculate_gini(self, y, *args):
-        n_samples = np.shape(y)[0]
-        return n_samples * pGini(y, self._lables)
-
-    def _calculate_least_squares_error(self, y, *args):
-        if len(args) > 0:
-            return np.sum(squared_error(y, args[0]))
-        else:
-            return np.sum(mean_squared_error(y))
-
-    def _calculate_linear_model_error(self, y, *args):
-        " TODO "
-        pass
+    def _calculate_error(self, y, *args):
+        raise NotImplementedError()
 
     def predict(self, X):
         y = np.zeros(X.shape[0])
@@ -165,6 +136,9 @@ class DecisionTree(object):
         y = self.predict(test_data[:, :-1])
         return self._calculate_error(y, test_data[:, -1])
 
+    def _set_tree_leaf(self, tree):
+        raise NotImplementedError()
+
     def prune(self, test_data):
         self.pruning(self._trees, test_data)
 
@@ -173,7 +147,8 @@ class DecisionTree(object):
             return
 
         left_data, right_data = split_dataset(
-            test_data, tree.split_feature, tree.node_val, self._relation)
+            test_data, tree.split_feature,
+            tree.node_val, self._relation[tree.split_feature])
         if tree.left:
             self.pruning(tree.left, left_data)
         if tree.right:
@@ -191,14 +166,60 @@ class DecisionTree(object):
 
             if errorMerge < errorNoMerge:
                 print("merge")
-                tree.is_leaf = True
-                tree.split_feature = None
-                if self._tree_type == "reg":
-                    tree.node_val = (left.node_val + right.node_val) / 2.0
-                else:
-                    counter_samples = \
-                        left.counter_samples + right.counter_samples
-                    tree.node_val = counter_samples.most_common(1)[0][0]
-                    tree.counter_samples = counter_samples
-                tree.left = None
-                tree.right = None
+                self._set_tree_leaf(tree)
+
+
+class DecisionTreeClassifier(DecisionTree):
+
+    def __init__(self, limit_depth=None, tol_err=0, tol_nset=1):
+        super(DecisionTreeClassifier, self).__init__(
+            limit_depth=limit_depth, tol_err=tol_err, tol_nset=tol_nset)
+
+    def _calculate_error(self, y, *args):
+        n_samples = np.shape(y)[0]
+        return n_samples * pGini(y, self._lables)
+
+    def _create_leaf_node(self, y):
+        t = Tree()
+        t.is_leaf = True
+        c = Counter(y)
+        t.node_val = c.most_common(1)[0][0]
+        t.counter_samples = c
+        return t
+
+    def _set_tree_leaf(self, tree):
+        tree.is_leaf = True
+        tree.split_feature = None
+        counter_samples = \
+            tree.left.counter_samples + tree.right.counter_samples
+        tree.node_val = counter_samples.most_common(1)[0][0]
+        tree.counter_samples = counter_samples
+
+        tree.left = None
+        tree.right = None
+
+
+class DecisionTreeRegressor(DecisionTree):
+
+    def __init__(self, limit_depth=None, tol_err=0, tol_nset=1):
+        super(DecisionTreeRegressor, self).__init__(
+            limit_depth=limit_depth, tol_err=tol_err, tol_nset=tol_nset)
+
+    def _calculate_error(self, y, *args):
+        if len(args) > 0:
+            return np.sum(squared_error(y, args[0]))
+        else:
+            return np.sum(mean_squared_error(y))
+
+    def _create_leaf_node(self, y):
+        t = Tree()
+        t.is_leaf = True
+        t.node_val = np.mean(y)
+        return t
+
+    def _set_tree_leaf(self, tree):
+        tree.is_leaf = True
+        tree.split_feature = None
+        tree.node_val = (tree.left.node_val + tree.right.node_val) / 2.0
+        tree.left = None
+        tree.right = None
