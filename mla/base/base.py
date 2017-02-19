@@ -52,3 +52,9 @@ def normal_feature(X):
     sigma = np.std(X, 0, ddof=1)
     return (X - mu) / sigma
 
+
+def reshape_1d_to_2d(X):
+    X = np.array(X)
+    if X.ndim == 1:
+        X = np.reshape(X, (X.shape[0], 1))
+    return X

@@ -27,7 +27,7 @@ class AdaBoost(object):
 
             pred = np.exp(-model.predict(X) * y * alpha)
             z = np.sum(weights * pred)
-            weights = (weights / z) * pred 
+            weights = (weights / z) * pred
         print("alpha: ", self._alphas)
 
     def predict(self, X):

@@ -7,6 +7,7 @@ from mla.base import split_dataset
 from mla.base import mean_squared_error
 from mla.base import squared_error
 from mla.base import pGini
+from mla.base import reshape_1d_to_2d
 
 
 class Tree:
@@ -47,29 +48,31 @@ class DecisionTree(object):
         self._tol_nset = tol_nset
         self._relation = []
 
-    def train_fit(self, X, y, discrete_features=None):
+    def train_fit(self, X, y, max_features=None, discrete_features=None):
         """ 建决策树
 
         :X: 训练数据
         :y: 训练数据
-        :relation: 数据特征划分是标记关系, 默认回归树为"<=", 分类树为"==".
         """
+        X = reshape_1d_to_2d(X)
         self._relation = [operator.lt] * np.shape(X)[0]
         if discrete_features:
             for i, is_disc in enumerate(discrete_features):
                 if is_disc:
                     self._relation[i] = operator.eq
 
-        self._lables = np.lib.arraysetops.unique(y)
-        self._trees = self.make_tree(X, y, 1)
+        self._labels = np.lib.arraysetops.unique(y)
+        if max_features is None:
+            max_features = np.shape(X)[1]
+        self._trees = self.make_tree(X, y, 1, max_features)
 
-    def make_tree(self, X, y, tree_depth):
+    def make_tree(self, X, y, tree_depth, max_features):
         if y.shape[0] <= self._tol_nset or \
            self._calculate_error(y) <= self._tol_err:
             return self._create_leaf_node(y)
 
         (split_feature, split_value,
-            less_mask, greater_mask) = self._find_best_split(X, y)
+         less_mask, greater_mask) = self._find_best_split(X, y, max_features)
         print("split_feature =", split_feature, "split_value =", split_value)
         if split_feature is None:
             return self._create_leaf_node(y)
@@ -82,16 +85,18 @@ class DecisionTree(object):
             t.is_leaf = True
             return t
 
-        t.left = self.make_tree(X[less_mask], y[less_mask], tree_depth + 1)
+        t.left = self.make_tree(
+            X[less_mask], y[less_mask], tree_depth + 1, max_features)
         t.right = self.make_tree(
-                X[greater_mask], y[greater_mask], tree_depth + 1)
+            X[greater_mask], y[greater_mask], tree_depth + 1, max_features)
         return t
 
-    def _find_best_split(self, X, y):
+    def _find_best_split(self, X, y, max_features):
         min_error, min_split_feature, min_split_value = None, None, None
         min_less_mask, min_greater_mask = None, None
         n_samples, n_features = X.shape
-        for j in range(n_features):
+        feature_subset = np.random.choice(range(0, n_features), max_features)
+        for j in feature_subset:
             for split_value in set(X[:, j]):
                 less_mask, greater_mask = get_split_mask(
                         X, j, split_value, self._relation[j])
@@ -168,7 +173,7 @@ class DecisionTreeClassifier(DecisionTree):
         n_samples = np.shape(y)[0]
         if n_samples == 0:
             return 0
-        return n_samples * pGini(y, self._lables)
+        return n_samples * pGini(y, self._labels)
 
     def _create_leaf_node(self, y):
         t = Tree()
