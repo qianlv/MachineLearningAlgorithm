@@ -8,6 +8,7 @@ from mla.base import mean_squared_error
 from mla.base import squared_error
 from mla.base import pGini
 from mla.base import reshape_1d_to_2d
+np_unique = np.lib.arraysetops.unique
 
 
 class Tree:
@@ -71,6 +72,9 @@ class DecisionTree(object):
            self._calculate_error(y) <= self._tol_err:
             return self._create_leaf_node(y)
 
+        if self._limit_depth and tree_depth >= self._limit_depth:
+            return self._create_leaf_node(y)
+
         (split_feature, split_value,
          less_mask, greater_mask) = self._find_best_split(X, y, max_features)
         print("split_feature =", split_feature, "split_value =", split_value)
@@ -81,23 +85,33 @@ class DecisionTree(object):
         t.node_val = split_value
         t.split_feature = split_feature
 
-        if self._limit_depth and tree_depth >= self._limit_depth:
-            t.is_leaf = True
-            return t
-
         t.left = self.make_tree(
             X[less_mask], y[less_mask], tree_depth + 1, max_features)
         t.right = self.make_tree(
             X[greater_mask], y[greater_mask], tree_depth + 1, max_features)
         return t
 
+    def _get_split_value_set(self, X, col):
+        assert self._relation
+        x = X[:, col]
+        if self._relation[col] == operator.eq:
+            return np_unique(x)
+        else:
+            x_unique = np_unique(x)
+            split_values = []
+            for v1, v2 in zip(x_unique[:-1], x_unique[1:]):
+                split_values.append((v1 + v2) / 2.0)
+            return split_values
+
     def _find_best_split(self, X, y, max_features):
         min_error, min_split_feature, min_split_value = None, None, None
         min_less_mask, min_greater_mask = None, None
         n_samples, n_features = X.shape
         feature_subset = np.random.choice(range(0, n_features), max_features)
+
         for j in feature_subset:
-            for split_value in set(X[:, j]):
+            split_values = self._get_split_value_set(X, j)
+            for split_value in split_values:
                 less_mask, greater_mask = get_split_mask(
                         X, j, split_value, self._relation[j])
                 if y[less_mask].shape[0] < self._tol_nset or \
