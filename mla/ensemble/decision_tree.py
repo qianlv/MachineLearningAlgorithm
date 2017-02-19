@@ -41,16 +41,7 @@ class DecisionTree(object):
 
     """ CART 算法生成决策树 """
 
-    Operators = {
-        '==': operator.eq,
-        '!=': operator.ne,
-        '<': operator.lt,
-        '<=': operator.le,
-        '>': operator.gt,
-        '>=': operator.ge,
-    }
-
-    def __init__(self, limit_depth=None, tol_err=0, tol_nset=1):
+    def __init__(self, limit_depth=None, tol_err=1, tol_nset=4):
         self._limit_depth = limit_depth
         self._tol_err = tol_err
         self._tol_nset = tol_nset
@@ -71,10 +62,9 @@ class DecisionTree(object):
 
         self._lables = np.lib.arraysetops.unique(y)
         self._trees = self.make_tree(X, y, 1)
-        #  print("tree: ", self._trees)
 
     def make_tree(self, X, y, tree_depth):
-        if y.shape[0] < self._tol_nset or \
+        if y.shape[0] <= self._tol_nset or \
            self._calculate_error(y) <= self._tol_err:
             return self._create_leaf_node(y)
 
@@ -165,7 +155,6 @@ class DecisionTree(object):
                                    (left.node_val + right.node_val)/2.0)
 
             if errorMerge < errorNoMerge:
-                print("merge")
                 self._set_tree_leaf(tree)
 
 
@@ -177,6 +166,8 @@ class DecisionTreeClassifier(DecisionTree):
 
     def _calculate_error(self, y, *args):
         n_samples = np.shape(y)[0]
+        if n_samples == 0:
+            return 0
         return n_samples * pGini(y, self._lables)
 
     def _create_leaf_node(self, y):
