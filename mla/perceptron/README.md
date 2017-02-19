@@ -1,3 +1,4 @@
+<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
 ### 感知机
 损失函数: 误分点到超平面的总距离, M 为误分点集合
 $$
