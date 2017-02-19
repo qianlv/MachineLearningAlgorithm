@@ -45,3 +45,10 @@ def pGini(y, lables):
 
 def accuracy(actual, pred):
     return np.mean(actual == pred)
+
+
+def normal_feature(X):
+    mu = np.mean(X, 0)
+    sigma = np.std(X, 0, ddof=1)
+    return (X - mu) / sigma
+

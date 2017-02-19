@@ -10,5 +10,5 @@ def test_linear_model():
     X = data[:, 0]
     Y = data[:, 1]
     #  print(X, Y)
-    linear.train_fit(X, Y, normal=True)
+    linear.train_fit(X, Y)
     linear.plot()
